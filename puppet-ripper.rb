@@ -12,11 +12,16 @@ class Mod
   end
 
   def types
-    files = Dir.chdir(types_path) do
-      Dir.glob(types_path + '/*.rb')
-    end
-    files.map do |f|
-      Type.new(self, f)
+    # TODO: cheating!
+    begin
+      files = Dir.chdir(types_path) do
+        Dir.glob(types_path + '/*.rb')
+      end
+      files.map do |f|
+        Type.new(self, f)
+      end
+    rescue
+      []
     end
   end
 
