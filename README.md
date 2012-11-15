@@ -6,4 +6,8 @@ Usage:
 
 Nothing fancy, just returns pretty JSON so you can spit this into a modulefile.
 
-Obviously no quality guarantees around this, interesting PoC though.
+Obviously no quality guarantees around this, interesting PoC though. Had some
+success testing this against:
+
+* puppetlabs-mysql
+* puppetlabs-firewall
