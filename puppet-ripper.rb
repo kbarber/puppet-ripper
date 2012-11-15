@@ -2,6 +2,7 @@
 
 require 'ripper'
 require 'pp'
+require 'json'
 
 class Mod
   attr_reader :path
@@ -22,6 +23,47 @@ class Mod
   # @api private
   def types_path
     File.join(path, 'lib', 'puppet', 'type')
+  end
+
+  def modulefile
+    Modulefile.new(self, File.join(path, "Modulefile"))
+  end
+end
+
+class Modulefile
+  attr_reader :mod, :path
+
+  def initialize(mod, path)
+    @mod = mod
+    @path = path
+  end
+
+  def sexp
+    Ripper.sexp(File.read(@path))
+  end
+
+  def sexp_main_block
+    program = sexp[1]
+
+    vals = {}
+    program.each do |s|
+      if s[0] == :command and
+         s[1][0] == :@ident and
+         s[2][0] == :args_add_block
+
+        name = s[1][1]
+        # TODO: accept multiple values
+        value = s[2][1][0][1][1][1]
+
+        vals[name] = value
+      end
+    end
+
+    return vals
+  end
+
+  def method_missing(meth, *val)
+    sexp_main_block[meth.to_s]
   end
 end
 
@@ -144,11 +186,12 @@ class Type
 end
 
 class Provider
-  attr_reader :path, :type
+  attr_reader :path, :type, :name
 
   def initialize(type, path)
     @path = path
     @type = type
+    @name = path.split("/")[-1].split(".")[0]
   end
 
   def sexp
@@ -204,16 +247,54 @@ class Provider
   end
 end
 
-
+# Create new module instance to work with
 pr = Mod.new(ARGV[0])
-#puts pr.path
-#pp pr.types
-#pp pr.types[0].sexp_newtype_block
-pp pr.types[0].doc
-pp pr.types[0].features
-pp pr.types[0].params
-pp pr.types[0].properties
-#pp pr.types[0].providers
-pp pr.types[0].providers[0].features
-#pp pr.types[0].providers[0].sexp_provide_block
-pp pr.types[0].providers[0].doc
+mf = pr.modulefile
+
+# Work out types part of hash
+types = pr.types.map do |t|
+  h = {}
+
+  h["name"] = t.name
+  h["doc"] = t.doc
+
+  h["parameters"] = []
+  t.params.each do |k,v|
+    h["parameters"] << {
+      "name" => k,
+      "doc" => v,
+    }
+  end
+
+  h["properties"] = []
+  t.properties.each do |k,v|
+    h["properties"] << {
+      "name" => k,
+      "doc" => v,
+    }
+  end
+
+  h["providers"] = t.providers.map do |p|
+    {
+      "name" => p.name,
+      "doc" => p.doc,
+    }
+  end
+
+  h
+end
+
+main = {
+  "dependencies" => mf.dependencies,
+  "summary" => mf.summary,
+  "description" => mf.description,
+  "version" => mf.version,
+  "license" => mf.license,
+  "author" => mf.author,
+  "source" => mf.source,
+  "name" => mf.name,
+  "checksums" => {},
+  "types" => types,
+}
+
+jj main
