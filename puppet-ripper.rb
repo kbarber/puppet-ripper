@@ -101,7 +101,7 @@ class Type
       end
     end
 
-    nil
+    []
   end
 
   # Extract the @doc declaration from the type
@@ -113,6 +113,7 @@ class Type
         return s[2][1][1][1]
       end
     end
+    ""
   end
 
   # Extra a hash of features from the type
@@ -172,11 +173,16 @@ class Type
   end
 
   def providers
-    files = Dir.chdir(providers_path) do
-      Dir.glob(providers_path + '/*.rb')
-    end
-    files.map do |f|
-      Provider.new(self, f)
+    # TODO: this begin,rescue is cheating
+    begin
+      files = Dir.chdir(providers_path) do
+        Dir.glob(providers_path + '/*.rb')
+      end
+      files.map do |f|
+        Provider.new(self, f)
+      end
+    rescue
+      return []
     end
   end
 
@@ -220,7 +226,7 @@ class Provider
       end
     end
 
-    nil
+    []
   end
 
   def features
@@ -244,6 +250,7 @@ class Provider
         return s[2][1][1][1]
       end
     end
+    ""
   end
 end
 
@@ -293,8 +300,10 @@ main = {
   "author" => mf.author,
   "source" => mf.source,
   "name" => mf.name,
+  # TODO: checksums
   "checksums" => {},
   "types" => types,
 }
 
-jj main
+pp main
+#jj main
